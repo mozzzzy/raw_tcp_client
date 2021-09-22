@@ -9,21 +9,47 @@ $ cmake --build build
 ```
 
 ## Run
-The following command make tcp connection between localhost's 49152 port and 172.18.0.3's 80 port, and send 'HELLO TCP'.
+To run the program in this repository, you should drop tcp RST segment sent from localhost.
+Because the code in this repository uses raw socket. Raw socket can't be bound with specific tcp port and is treated as unconnected socket by the operating system. So when remote host send some tcp segment to local port that is listened by the program, operating system treats it as a segment that was sent to a closed port, and it sends tcp RST segment.
+
+If you use firewalld, the following commands set rule to drop tcp RST segment sent from localhost.
+```bash
+$ firewall-cmd \
+  --permanent \
+  --direct \
+  --add-rule \
+  ipv4 filter OUTPUT 1 -p tcp --tcp-flags RST RST -j DROP
+
+$ firewall-cmd --reload
+$ firewall-cmd --direct --get-all-rules
 ```
+If you want to remove the above rule, please use the following command.
+```
+$ firewall-cmd \
+  --permanent \
+  --direct \
+  --remove-rule \
+  ipv4 filter OUTPUT 1 -p tcp --tcp-flags RST RST -j DROP
+$ firewall-cmd --reload
+$ firewall-cmd --direct --get-all-rules
+```
+
+The following command make tcp connection between localhost's 49152 port and 172.18.0.3's 80 port, and send 'HELLO TCP'.
+```bash
 $ sudo build/bin/main eth0 49152 172.18.0.3 80
 ```
+
 To check the above communication,  
 first, run TCP server in 172.18.0.3's 80 port using following command.
-```
+```bash
 $ nc -kl 80
 ```
 And then capture the packets between them.
-```
+```bash
 $ sudo tcpdump -Zroot port 80 -X -vvv
 ```
 The output of tcpdump is like the following.
-```
+```bash
 tcpdump: listening on eth0, link-type EN10MB (Ethernet), capture size 262144 bytes
 
 # local -> remote (SYN = 1)
